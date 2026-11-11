@@ -218,15 +218,16 @@ function buildData(sell,qty){const sh=findHdr(sell,["idaccount","personelcode"])
  sI={id:ci(S,x=>x.includes("idaccount")),code:ci(S,x=>x.includes("personelcode")),name:ci(S,x=>x.includes("advisor")&&x.includes("name")),store:ci(S,x=>x=="storename"),area:S.lastIndexOf("arm"),dob:ci(S,x=>x=="dob"||x.includes("birth"))},
  qI={code:ci(Q,x=>x=="personnelid"),key:ci(Q,x=>x=="cek"),nom:ci(Q,x=>x.startsWith("nominal")),price:ci(Q,x=>x=="retailprice")};
  if(sI.id<0||sI.code<0||qI.code<0||qI.key<0||qI.nom<0)throw{message:"Kolom wajib tidak lengkap (ID ACCOUNT, PERSONEL CODE, Personnel ID, cek, NOMINAL)."};
- const eol=items.findIndex(x=>x.m.startsWith("EOL")),idx={};items.forEach((x,i)=>idx[(x.m+" "+x.s).toLowerCase()]=i);const agg={},bad={},cv=(r,k)=>k<0?"":String(r[k]??"").trim();
- qty.slice(qh+1).forEach(r=>{const c=cv(r,qI.code),k=cv(r,qI.key);if(!c||!k||k=="0")return;let i=idx[k.toLowerCase()];
+ const eol=items.findIndex(x=>x.m.startsWith("EOL")),idx={};items.forEach((x,i)=>idx[(x.m+" "+x.s).toLowerCase()]=i);const agg={},bad={},qtyByCode={},cv=(r,k)=>k<0?"":String(r[k]??"").trim();
+ qty.slice(qh+1).forEach(r=>{const c=cv(r,qI.code),k=cv(r,qI.key);if(!c||!k||k=="0")return;qtyByCode[c]=(qtyByCode[c]||0)+1;let i=idx[k.toLowerCase()];
   if(k.toUpperCase()=="EOL"){const p=+r[qI.price];i=p>0?(p<=2e6?eol:eol+1):undefined}
-  if(i==null){bad[k]=(bad[k]||0)+1;return}const a=agg[c]||(agg[c]={}),o=a[i]||(a[i]=[0,0]);o[0]++;o[1]+=+r[qI.nom]||0});
+  if(i==null){const z=bad[k]||(bad[k]={rows:0,units:0});z.rows++;z.units++;return}const a=agg[c]||(agg[c]={}),o=a[i]||(a[i]=[0,0]);o[0]++;o[1]+=+r[qI.nom]||0});
  const out={},dobs={},seen=new Set();let units=0,withSales=0,noDob=0;
  sell.slice(sh+1).forEach(r=>{const id=cv(r,sI.id).replace(/\D/g,"");if(id.length<6)return;const code=cv(r,sI.code),a=agg[code]||{};seen.add(code);
   const rows=Object.keys(a).map(Number).sort((x,y)=>x-y).map(i=>[i,a[i][0],a[i][1]]);units+=rows.reduce((s,x)=>s+x[1],0);if(rows.length)withSales++;
   const bd=nd(sI.dob<0?"":r[sI.dob]);dobs[id]=bd;if(!bd)noDob++;out[id]=[cv(r,sI.name),cv(r,sI.store),cv(r,sI.area),rows]});
- return{out,dobs,noDob,bad,units,withSales,orphan:Object.keys(agg).filter(c=>!seen.has(c)).length}}
+ const orphanCodes=Object.keys(qtyByCode).filter(c=>!seen.has(c)),orphanRows=orphanCodes.reduce((n,c)=>n+qtyByCode[c],0),badUnits=Object.values(bad).reduce((n,x)=>n+x.units,0);
+ return{out,dobs,noDob,bad,badUnits,units,withSales,orphan:orphanCodes.length,orphanCodes,orphanRows,orphanUnits:orphanRows,headers:{sell:sh+1,qty:qh+1}}}
 async function encP(id,p,dob){const hx=[...new Uint8Array(await crypto.subtle.digest("SHA-256",te.encode("realme-ins|"+id)))].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,24),
  salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),km=await crypto.subtle.importKey("raw",te.encode(dob?id+"|"+dob:id),"PBKDF2",false,["deriveKey"]),
  k=await crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt"]);
@@ -250,7 +251,7 @@ $("xf").onchange=async e=>{const f=e.target.files[0];if(!f)return;selectedFile=f
   if(!qn||!sn)throw{message:"Sheet “Qty” atau “Sellout - Promoter” tidak ada di file ini."};
   const wb=XLSX.read(buf,{sheets:[qn,sn]}),rd=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:""});
   R=buildData(rd(sn),rd(qn));const n=Object.keys(R.out).length,bd=Object.entries(R.bad);
-  xs.textContent=`${n} promoter terbaca (${R.withSales} punya penjualan), total ${R.units} unit. Sebelumnya ${Object.keys(E).length} promoter.`+(R.noDob?`\n⚠ ${R.noDob} promoter belum punya tanggal lahir (kolom DOB kosong); mereka belum bisa membuka hasilnya sampai kolom itu terisi.`:"")+(R.orphan?`\n${R.orphan} kode personel di sheet Qty tidak punya ID Account (DSA/non-promoter), tidak dihitung.`:"")+(bd.length?`\nKey produk tidak dikenali, tidak dihitung:\n`+bd.slice(0,8).map(([k,v])=>`• ${k} ×${v}`).join("\n"):"");xp.hidden=!n}
+  xs.textContent=n+" promoter terbaca ("+R.withSales+" punya penjualan), total "+R.units+" unit. Sebelumnya "+Object.keys(E).length+" promoter.\nHeader terdeteksi: Sellout - Promoter baris "+R.headers.sell+"; Qty baris "+R.headers.qty+"."+(R.noDob?"\n⚠ "+R.noDob+" promoter belum punya tanggal lahir (kolom DOB kosong); mereka belum bisa membuka hasilnya sampai kolom itu terisi.":"")+(R.orphan?"\nKode personel Qty tanpa ID Account: "+R.orphan+" kode ("+R.orphanRows+" baris/"+R.orphanUnits+" unit), dikecualikan: "+R.orphanCodes.slice(0,12).join(", "):"")+(bd.length?"\nKey produk tidak dikenali ("+R.badUnits+" unit), tidak dihitung:\n"+bd.slice(0,12).map(([k,v])=>"• "+k+" ×"+v.units+" unit ("+v.rows+" baris)").join("\n"):"");xp.hidden=!n}
  catch(x){xs.textContent="Gagal membaca Excel: "+(x.message||x)}};
 xp.onclick=async()=>{if(!R||!selectedFile||!accessToken)return;xp.disabled=true;try{const ids=Object.keys(R.out),ne={};
   for(let i=0;i<ids.length;i+=16){xs.textContent=`Mengenkripsi ${Math.min(i+16,ids.length)}/${ids.length}…`;(await Promise.all(ids.slice(i,i+16).map(id=>encP(id,R.out[id],R.dobs[id])))).forEach(([k,v])=>ne[k]=v)}
