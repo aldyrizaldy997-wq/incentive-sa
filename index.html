@@ -328,7 +328,8 @@ function renderAdminSettings(){if(!adminSession)return;$("adminSettings").hidden
 function applyAdminSettings(){
  const catRows=[...$("catalogEditor").querySelectorAll("tbody tr")],next=[];
  catRows.forEach((tr)=>{const get=k=>tr.querySelector(`[data-cat="${k}"]`)?.value;const m=(get("m")||"").trim(),sp=(get("s")||"").trim(),price=numV(get("price")),r=numV(get("r"));if(!m||!sp)throw new Error("Model dan spesifikasi tidak boleh kosong.");if(price<0||r<0)throw new Error("Harga dan nominal tidak boleh negatif.");next.push({m,s:sp,price,r,q:0})});
- const keys=next.map(x=>normH(x.m+x.s));if(new Set(keys).size!==keys.length)throw new Error("Ada model dan spesifikasi duplikat di katalog.");if(!next.length)throw new Error("Katalog tidak boleh kosong.");
+ const catalogDuplicateKey=(m,s)=>[m,s].map(v=>String(v??"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/>=/g," greaterequal ").replace(/<=/g," lessequal ").replace(/≥/g," greaterequal ").replace(/≤/g," lessequal ").replace(/>/g," greater ").replace(/</g," less ").replace(/[^a-z0-9]/g,"")).join("|");
+ const keys=next.map(x=>catalogDuplicateKey(x.m,x.s));if(new Set(keys).size!==keys.length)throw new Error("Ada model dan spesifikasi duplikat di katalog.");if(!next.length)throw new Error("Katalog tidak boleh kosong.");
  const tiers=[...$("tierEditor").querySelectorAll("tbody tr")].map(tr=>[numV(tr.querySelector('[data-tier="min"]').value),numV(tr.querySelector('[data-tier="mul"]').value),tr.querySelector('[data-tier="label"]').value.trim()||String(numV(tr.querySelector('[data-tier="min"]').value))+"+"]);
  tiers.sort((a,b)=>a[0]-b[0]);if(!tiers.length||tiers[0][0]!==0)throw new Error("Tier pertama harus dimulai dari 0 unit.");if(tiers.some((x,i)=>x[0]<0||x[1]<0||(i>0&&x[0]===tiers[i-1][0])))throw new Error("Minimum unit harus unik dan pengali tidak boleh negatif.");
  items.splice(0,items.length,...next);T=tiers;build();upd();return true;
