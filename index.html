@@ -40,6 +40,7 @@ h3{margin:0 0 4px;font-size:15px}.m{color:var(--mut);font-size:12px}
 .li{display:flex;gap:8px;margin-top:10px}.li input{flex:1;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:11px 14px;font:inherit;font-size:16px}
 .go{background:#1c1a10;color:#ffd60a;border:0;border-radius:12px;padding:0 20px;font:inherit;font-weight:700;cursor:pointer}
 .err{color:#dc2626;font-size:13px;margin-top:8px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--mut);font-size:12px}td.n,th.n{text-align:right}
+.actual-asp{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(245,196,0,.10)}.actual-asp span{display:block;font-size:11px;color:var(--mut);font-weight:700;letter-spacing:.04em}.actual-asp b{display:block;font-size:22px;font-weight:900;margin-top:2px}.actual-asp small{display:block;color:var(--mut);font-size:11px}.actual-asp .asp-mini{text-align:right}.actual-asp .asp-mini b{font-size:15px}@media(max-width:560px){.actual-asp{align-items:flex-start;flex-direction:column}.actual-asp .asp-mini{text-align:left}}
 .asp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.asp-field label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}.asp-field input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}.asp-result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.asp-result>div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px}.asp-result span{display:block;color:var(--mut);font-size:11px}.asp-result b{display:block;font-size:15px;margin-top:3px;overflow-wrap:anywhere}.asp-note{font-size:12px;color:var(--mut);margin-top:9px}@media(max-width:560px){.asp-grid{grid-template-columns:1fr}.asp-result{grid-template-columns:1fr 1fr}}
 .w{position:relative;z-index:1}#fx{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
 .pt{position:absolute;top:-20px;width:10px;height:10px;background:linear-gradient(135deg,#ffd60a,#ffb3c6);border-radius:150% 0 150% 0;opacity:.65;animation:fall linear infinite}
@@ -99,26 +100,28 @@ h3{margin:0 0 4px;font-size:15px}.m{color:var(--mut);font-size:12px}
 <div class="li"><input id="aid" inputmode="numeric" placeholder="ID Account" autocomplete="off"><button class="go" id="ago">Cek</button></div><div class="li" id="dobw" hidden><input id="dob" inputmode="numeric" maxlength="8" placeholder="Tanggal lahir (yyyymmdd)" autocomplete="off"><button class="go" id="dgo">Cek</button></div><div class="err" id="aerr"></div></div>
 <div id="ares" hidden><section class="hero" style="position:static;margin-top:12px"><small id="asub"></small><div style="font-weight:800;font-size:20px" id="ahi"></div>
 <small style="display:block;margin-top:8px">Insentif final berdasarkan data aktual</small><div class="big" id="afin">Rp 0</div>
-<div class="hs"><div><span>Total unit</span><b id="atu">0</b></div><div><span>Nominal sebelum pengali</span><b id="anom">Rp 0</b></div><div><span>Pengali pencapaian</span><b id="amul">0×</b></div></div><div class="mrow"><div class="mas" id="mas2"></div><div class="msg bub" id="amsg"></div></div></section>
+<div class="hs"><div><span>Total unit</span><b id="atu">0</b></div><div><span>Nominal sebelum pengali</span><b id="anom">Rp 0</b></div><div><span>Pengali pencapaian</span><b id="amul">0×</b></div></div>
+<div class="actual-asp"><div><span>ACTUAL ASP</span><b id="aspActualView">Belum tersedia</b><small>Dihitung otomatis dari total retail ÷ total unit</small></div><div class="asp-mini"><span>Total nilai retail</span><b id="aspActualSales">—</b></div></div>
+<div class="mrow"><div class="mas" id="mas2"></div><div class="msg bub" id="amsg"></div></div></section>
 <div class="card"><h3>Tangga Pencapaian</h3><div class="lad" id="alad"></div><div class="pb"><i id="apg"></i></div></div>
 <div class="card"><h3>Rincian Penjualan</h3><div style="overflow-x:auto"><table id="atb"></table></div>
 <button class="go" style="margin-top:12px;padding:11px 18px" id="asim">Simulasikan dari data ini →</button></div></div></div>
 <div id="vS" hidden>
 
 <div class="card" id="aspSimulator" style="margin-top:0;border-color:var(--pri2)">
- <h3>📈 ASP Simulation per SA</h3>
- <div class="m">Ubah ASP dan total unit untuk melihat simulasi nilai penjualan. Angka aktual menjadi titik awal; perubahan di sini tidak mengubah data aktual atau kalkulasi insentif utama.</div>
+ <h3>📈 Simulasi ASP per SA</h3>
+ <div class="m">Ubah jumlah unit dan total nilai retail simulasi. ASP akan dihitung otomatis dan tidak bisa diedit manual. Data Actual tetap tidak berubah.</div>
  <div class="asp-grid">
-  <div class="asp-field"><label for="aspInput">Target ASP (Rp)</label><input id="aspInput" type="number" min="0" step="50000" inputmode="numeric" placeholder="Masukkan target ASP"></div>
-  <div class="asp-field"><label for="aspQtyInput">Target Total Unit</label><input id="aspQtyInput" type="number" min="0" step="1" inputmode="numeric" placeholder="Masukkan total unit"></div>
+  <div class="asp-field"><label for="aspQtyInput">Total Unit Simulasi</label><input id="aspQtyInput" type="number" min="0" step="1" inputmode="numeric" placeholder="Masukkan total unit"></div>
+  <div class="asp-field"><label for="aspSalesInput">Total Nilai Retail Simulasi (Rp)</label><input id="aspSalesInput" type="number" min="0" step="100000" inputmode="numeric" placeholder="Masukkan total nilai retail"></div>
  </div>
  <div class="asp-result">
-  <div><span>ASP aktual</span><b id="aspActual">Belum tersedia</b></div>
-  <div><span>Total nilai retail simulasi</span><b id="aspSalesValue">Rp 0</b></div>
-  <div><span>Perubahan vs aktual</span><b id="aspDelta">—</b></div>
+  <div><span>Actual ASP</span><b id="aspActual">Belum tersedia</b></div>
+  <div><span>Simulation ASP</span><b id="aspSimulated">—</b></div>
+  <div><span>Perubahan Total Retail</span><b id="aspDelta">—</b></div>
  </div>
  <div class="asp-note" id="aspStatus">Masuk melalui Cek Insentif Aktual untuk memuat data SA.</div>
- <button class="btn" id="aspReset" type="button" style="margin-top:10px">Reset ke ASP & unit aktual</button>
+ <button class="btn" id="aspReset" type="button" style="margin-top:10px">Reset ke data aktual</button>
 </div>
 
 <section class="hero">
@@ -268,28 +271,34 @@ function show(p,ns){cur=p;const rows=p[3],u=rows.reduce((a,x)=>a+x[1],0),nom=row
  if(!ns)$("ares").scrollIntoView({behavior:"smooth",block:"start"})}
 $("ago").onclick=$("dgo").onclick=look;$("aid").onkeydown=$("dob").onkeydown=e=>{if(e.key=="Enter")look()};$("aid").oninput=()=>{$("dobw").hidden=true;$("dob").value="";er("")};
 $("asim").onclick=()=>{items.forEach(x=>x.q=0);cur[3].forEach(x=>items[x[0]].q=x[1]);upd();loadAspBaseline(cur);tab(false);scrollTo({top:0,behavior:"smooth"})};
-// ASP simulation is isolated from the official incentive calculator.
+// ASP is calculated automatically; this module never changes actual incentive data.
 let aspBaseline={units:0,retail:0,hasRetail:false};
 const aspMoney=n=>rp(Number.isFinite(n)?n:0);
 function refreshAsp(){
- const asp=Number($("aspInput").value)||0,qty=Math.max(0,Math.floor(Number($("aspQtyInput").value)||0));
- const total=asp*qty,delta=total-aspBaseline.retail;
- $("aspSalesValue").textContent=aspMoney(total);
+ const qty=Math.max(0,Math.floor(Number($("aspQtyInput").value)||0));
+ const sales=Math.max(0,Number($("aspSalesInput").value)||0);
+ const simulatedAsp=qty>0?sales/qty:0;
+ $("aspSimulated").textContent=qty>0?aspMoney(simulatedAsp):"—";
+ const delta=sales-aspBaseline.retail;
  $("aspDelta").textContent=aspBaseline.hasRetail?(delta>0?"+":"")+aspMoney(delta):"Belum ada pembanding";
  $("aspDelta").style.color=delta>0?"#16a34a":delta<0?"#dc2626":"var(--ink)";
 }
 function loadAspBaseline(p){
  const rows=p?.[3]||[];let units=0,retail=0,missing=0;
- rows.forEach(x=>{const q=Number(x[1])||0;units+=q;if(x.length>=4&&Number(x[3])>0)retail+=Number(x[3]);else missing+=q});
+ rows.forEach(x=>{const q=Number(x[1])||0;units+=q;if(x.length>=4&&Number(x[3])>0)retail+=Number(x[3]);else if(q>0)missing+=q});
  aspBaseline={units,retail,hasRetail:units>0&&missing===0&&retail>0};
- $("aspActual").textContent=aspBaseline.hasRetail?aspMoney(retail/units):"Belum tersedia";
- $("aspInput").value=aspBaseline.hasRetail?Math.round(retail/units):"";
+ const actualAsp=aspBaseline.hasRetail?retail/units:0;
+ const actualText=aspBaseline.hasRetail?aspMoney(actualAsp):"Belum tersedia";
+ $("aspActual").textContent=actualText;
+ $("aspActualView").textContent=actualText;
+ $("aspActualSales").textContent=aspBaseline.hasRetail?aspMoney(retail):"Belum tersedia";
  $("aspQtyInput").value=units||"";
- $("aspStatus").textContent=aspBaseline.hasRetail?"ASP aktual dihitung dari total (Qty × Retail Price) seluruh model milik SA ini.":"Data retail per SA belum tersedia di dataset aktif. Admin perlu upload ulang Excel sumber setelah memasang versi kalkulator ini; pastikan sheet Qty memiliki kolom Retail Price.";
+ $("aspSalesInput").value=aspBaseline.hasRetail?Math.round(retail):"";
+ $("aspStatus").textContent=aspBaseline.hasRetail?"Actual ASP berasal dari total nilai retail seluruh model SA dibagi total unit. Ubah Qty atau Total Nilai Retail untuk melihat Simulation ASP.":"Data Retail Price belum lengkap pada data SA ini. Pastikan sheet Qty memiliki kolom Retail Price dan data sudah diunggah Admin.";
  refreshAsp();
 }
-$("aspInput").addEventListener("input",refreshAsp);$("aspQtyInput").addEventListener("input",refreshAsp);
-$("aspReset").onclick=()=>{if(!aspBaseline.hasRetail)return;$("aspInput").value=Math.round(aspBaseline.retail/aspBaseline.units);$("aspQtyInput").value=aspBaseline.units;refreshAsp()};
+$("aspQtyInput").addEventListener("input",refreshAsp);$("aspSalesInput").addEventListener("input",refreshAsp);
+$("aspReset").onclick=()=>{if(!aspBaseline.hasRetail)return;$("aspQtyInput").value=aspBaseline.units;$("aspSalesInput").value=Math.round(aspBaseline.retail);refreshAsp()};
 
 
 $("lgs").value=lang;applyStatic();renderStockSelector();
