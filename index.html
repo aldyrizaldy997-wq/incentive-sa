@@ -108,26 +108,11 @@ h3{margin:0 0 4px;font-size:15px}.m{color:var(--mut);font-size:12px}
 <button class="go" style="margin-top:12px;padding:11px 18px" id="asim">Simulasikan dari data ini →</button></div></div></div>
 <div id="vS" hidden>
 
-<div class="card" id="aspSimulator" style="margin-top:0;border-color:var(--pri2)">
- <h3>📈 Simulasi ASP per SA</h3>
- <div class="m">Ubah jumlah unit dan total nilai retail simulasi. ASP akan dihitung otomatis dan tidak bisa diedit manual. Data Actual tetap tidak berubah.</div>
- <div class="asp-grid">
-  <div class="asp-field"><label for="aspQtyInput">Total Unit Simulasi</label><input id="aspQtyInput" type="number" min="0" step="1" inputmode="numeric" placeholder="Masukkan total unit"></div>
-  <div class="asp-field"><label for="aspSalesInput">Total Nilai Retail Simulasi (Rp)</label><input id="aspSalesInput" type="number" min="0" step="100000" inputmode="numeric" placeholder="Masukkan total nilai retail"></div>
- </div>
- <div class="asp-result">
-  <div><span>Actual ASP</span><b id="aspActual">Belum tersedia</b></div>
-  <div><span>Simulation ASP</span><b id="aspSimulated">—</b></div>
-  <div><span>Perubahan Total Retail</span><b id="aspDelta">—</b></div>
- </div>
- <div class="asp-note" id="aspStatus">Masuk melalui Cek Insentif Aktual untuk memuat data SA.</div>
- <button class="btn" id="aspReset" type="button" style="margin-top:10px">Reset ke data aktual</button>
-</div>
-
 <section class="hero">
  <small>Estimasi insentif final kamu</small>
  <div class="big" id="fin">Rp 0</div>
  <div class="hs"><div><span>Total unit</span><b id="tu">0</b></div><div><span>Nominal sebelum pengali</span><b id="nom">Rp 0</b></div><div><span>Pengali pencapaian</span><b id="mul">0×</b></div></div>
+ <div class="actual-asp"><div><span>SIMULATION ASP</span><b id="aspSimulatedView">—</b><small>Dihitung otomatis dari komposisi model simulasi</small></div><div class="asp-mini"><span>Total nilai retail simulasi</span><b id="aspSimSales">—</b></div></div>
  <div class="mrow"><div class="mas" id="mas1"></div><div class="msg bub" id="msg"></div></div>
 </section>
 
@@ -135,9 +120,8 @@ h3{margin:0 0 4px;font-size:15px}.m{color:var(--mut);font-size:12px}
  <div class="lad" id="lad"></div><div class="pb"><i id="pg"></i></div></div>
 
 <div class="card" id="stockCard" style="margin-bottom:12px">
- <h3>📦 Validasi Stock per Store & Model</h3>
- <div class="li" style="margin-top:8px"><select id="stockStore" class="btn" style="width:100%"><option value="">Pilih Store untuk simulasi</option></select></div>
- <div class="m" id="stockSummary" style="margin-top:8px">Pilih store agar batas stock per model dapat diterapkan.</div>
+ <h3>📦 Validasi Stock Store Promoter</h3>
+ <div class="m" id="stockSummary" style="margin-top:8px">Store akan terdeteksi otomatis dari data promoter.</div>
 </div>
 <div class="two">
 <div class="card"><h3>Isi Penjualan Bulan Ini</h3><small class="m">Tekan + untuk menambah unit per model</small><div id="list"></div></div>
@@ -204,19 +188,20 @@ let items=[];G.forEach(g=>g[1].forEach(s=>items.push({m:g[0],s:s[0],r:s[1],price
 const DEFAULT_CATALOG=items.map(x=>({...x}));
 let STOCK={stores:{}},selectedStoreCode="";
 const stockKey=(m,s)=>normH(String(m||"")+"|"+String(s||""));
-function getStockLimit(x){const st=STOCK.stores?.[selectedStoreCode];return Number(st?.items?.[stockKey(x.m,x.s)]?.qty||0)}
-function renderStockSelector(){
- const sel=$("stockStore");if(!sel)return;
- const prev=selectedStoreCode,stores=Object.entries(STOCK.stores||{}).sort((a,b)=>(a[1].name||a[0]).localeCompare(b[1].name||b[0]));
- sel.innerHTML='<option value="">Pilih Store untuk simulasi</option>'+stores.map(([code,v])=>`<option value="${escAttr(code)}">${escAttr(v.name||code)} · ${escAttr(code)}</option>`).join("");
- if(prev&&STOCK.stores?.[prev])sel.value=prev;else{selectedStoreCode="";sel.value=""}
- $("stockSummary").textContent=stores.length?`${stores.length.toLocaleString("id-ID")} store tersedia. Pilih store untuk membatasi simulasi per model.`:"Data stock belum tersedia. Admin perlu upload workbook dengan sheet Update Stock.";
+function resolvePromoterStore(p){
+ const storeName=normH(p?.[1]||"");const entries=Object.entries(STOCK.stores||{});
+ if(!storeName){selectedStoreCode="";return}
+ let hit=entries.find(([code,v])=>normH(v.name||"")===storeName);
+ if(!hit)hit=entries.find(([code,v])=>{const n=normH(v.name||"");return n&&(n.includes(storeName)||storeName.includes(n))});
+ selectedStoreCode=hit?hit[0]:"";
 }
+function getStockLimit(x){const st=STOCK.stores?.[selectedStoreCode];return Number(st?.items?.[stockKey(x.m,x.s)]?.qty||0)}
+function renderStockSelector(){refreshStockSummary()}
 function refreshStockSummary(){
  const st=STOCK.stores?.[selectedStoreCode];
- if(!st){$("stockSummary").textContent="Pilih store agar batas stock per model dapat diterapkan.";return}
+ if(!st){$("stockSummary").textContent="Stock store belum dapat dicocokkan otomatis dengan data promoter. Hubungi Admin untuk memeriksa kesesuaian nama store pada data promoter dan Update Stock.";return}
  const models=Object.keys(st.items||{}).length,total=Object.values(st.items||{}).reduce((a,x)=>a+Number(x.qty||0),0);
- $("stockSummary").textContent=`${st.name||selectedStoreCode} · ${models} kombinasi model/spesifikasi · Total ${total.toLocaleString("id-ID")} IMEI unik.`;
+ $("stockSummary").textContent=`Store terdeteksi otomatis: ${st.name||selectedStoreCode} · ${models} kombinasi model/spesifikasi · Total ${total.toLocaleString("id-ID")} IMEI unik.`;
 }
 // C01 variants are intentionally included as eligible catalog keys. Their simulation rate is populated from the uploaded Memo sheet; zero is a safe fallback and must be reviewed before publishing if Memo cannot supply a rate.
 const tier=u=>{let t=0;T.forEach((x,i)=>{if(u>=x[0])t=i});return t};
@@ -224,11 +209,11 @@ let shown=0;
 function anim(to){const from=shown,t0=performance.now();shown=to;(function f(t){const k=Math.min(1,(t-t0)/450);$("fin").textContent=rp(from+(to-from)*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(f)})(t0)}
 function build(){let h="";const groups=new Map();items.forEach((x,i)=>{if(!groups.has(x.m))groups.set(x.m,[]);groups.get(x.m).push({...x,i})});groups.forEach((list,model)=>{h+=`<div class="grp"><h4><span>${dn(model)}</span></h4>`;list.forEach(x=>{const i=x.i;h+=`<div class="it" id="r${i}"><div><b>${ds(x.s)}</b><span class="m">${rp(x.r)} ${L("perunit")}</span><span class="m stockMeta"></span></div><div class="sp"><button data-i="${i}" data-d="-1">−</button><input type="number" min="0" inputmode="numeric" data-i="${i}" value="${x.q||0}"><button class="p" data-i="${i}" data-d="1">+</button></div></div>`});h+="</div>"});
  $("list").innerHTML=h;
- $("list").onclick=e=>{const b=e.target.closest("button");if(!b)return;const i=+b.dataset.i,it=items[i],next=Math.max(0,it.q+ +b.dataset.d),limit=getStockLimit(it);if(+b.dataset.d>0&&(!selectedStoreCode||next>limit)){if(!selectedStoreCode)alert("Pilih store terlebih dahulu.");else alert(`Stock ${it.m} ${it.s} hanya ${limit} unit. Sisa yang dapat ditambahkan: ${Math.max(0,limit-it.q)} unit.`);return}it.q=next;upd()};
- $("list").oninput=e=>{if(e.target.tagName=="INPUT"){const i=+e.target.dataset.i,it=items[i],raw=Math.max(0,parseInt(e.target.value)||0),limit=getStockLimit(it);if(!selectedStoreCode||raw>limit){e.target.value=it.q;alert(!selectedStoreCode?"Pilih store terlebih dahulu.":`Melebihi stock ${it.m} ${it.s}. Maksimal ${limit} unit.`);return}it.q=raw;upd(true)}}}
+ $("list").onclick=e=>{const b=e.target.closest("button");if(!b)return;const i=+b.dataset.i,it=items[i],next=Math.max(0,it.q+ +b.dataset.d),limit=getStockLimit(it);if(+b.dataset.d>0&&(!selectedStoreCode||next>limit)){if(!selectedStoreCode)alert("Store promoter belum cocok dengan data stock. Hubungi Admin.");else alert(`Stock ${it.m} ${it.s} hanya ${limit} unit. Sisa yang dapat ditambahkan: ${Math.max(0,limit-it.q)} unit.`);return}it.q=next;upd()};
+ $("list").oninput=e=>{if(e.target.tagName=="INPUT"){const i=+e.target.dataset.i,it=items[i],raw=Math.max(0,parseInt(e.target.value)||0),limit=getStockLimit(it);if(!selectedStoreCode||raw>limit){e.target.value=it.q;alert(!selectedStoreCode?"Store promoter belum cocok dengan data stock. Hubungi Admin.":`Melebihi stock ${it.m} ${it.s}. Maksimal ${limit} unit.`);return}it.q=raw;upd(true)}}}
 function upd(keep){
  const u=items.reduce((a,x)=>a+x.q,0),nom=items.reduce((a,x)=>a+x.q*x.r,0),ti=tier(u),mu=T[ti][1],fin=nom*mu;
- items.forEach((x,i)=>{const r=$("r"+i);r.classList.toggle("has",x.q>0);if(!keep)r.querySelector("input").value=x.q;const lim=getStockLimit(x),meta=r.querySelector(".stockMeta"),inp=r.querySelector("input"),plus=r.querySelector("button.p");if(meta)meta.textContent=selectedStoreCode?`Stock: ${lim} · Terpakai: ${x.q} · Sisa: ${Math.max(0,lim-x.q)}`:"Pilih store untuk melihat stock";if(inp){inp.max=String(lim);inp.disabled=!selectedStoreCode||lim<=0}if(plus)plus.disabled=!selectedStoreCode||x.q>=lim});refreshStockSummary();
+ items.forEach((x,i)=>{const r=$("r"+i);r.classList.toggle("has",x.q>0);if(!keep)r.querySelector("input").value=x.q;const lim=getStockLimit(x),meta=r.querySelector(".stockMeta"),inp=r.querySelector("input"),plus=r.querySelector("button.p");if(meta)meta.textContent=selectedStoreCode?`Stock: ${lim} · Terpakai: ${x.q} · Sisa: ${Math.max(0,lim-x.q)}`:"Stock store promoter belum tersedia";if(inp){inp.max=String(lim);inp.disabled=!selectedStoreCode||lim<=0}if(plus)plus.disabled=!selectedStoreCode||x.q>=lim});refreshStockSummary();
  anim(fin);$("tu").textContent=u;$("nom").textContent=rp(nom);$("mul").textContent=mf(mu)+"×";
  const nx=T[ti+1],need=nx?nx[0]-u:0;
  $("msg").textContent=u==0?L("m0"):ti==0?L("m1",21-u):nx?L("m2",need,mf(nx[1])):L("m3");mood("mas1",u,ti);if(ti>(upd.pt||0)&&u>0)burst($("fin").closest(".hero"));upd.pt=ti;
@@ -237,7 +222,7 @@ function upd(keep){
  const act=items.filter(x=>x.q>0).sort((a,b)=>b.q*b.r-a.q*a.r),mx=act[0]?act[0].q*act[0].r:1;
  $("br").innerHTML=act.length?act.map(x=>`<div class="bar"><span>${dn(x.m).replace("realme ","")} ${x.m.startsWith("EOL")?(x.r==15000?"≤2jt":">2jt"):x.s.split(" ")[0]}</span><div><i style="width:${x.q*x.r/mx*100}%"></i></div><b>${rp(x.q*x.r)}</b></div>`).join(""):'<span class="m">'+L("nodata")+'</span>';
  $("sim").innerHTML=nom?T.slice(1).map(x=>{const f=nom*x[1],ex=Math.max(0,x[0]-u);return`<div class="bar" style="grid-template-columns:90px 1fr 100px"><span>${x[2]} ${L("unit")}</span><div><i style="width:${Math.min(100,f/(nom*1.2)*100)}%"></i></div><b>${rp(f)}</b></div>${ex?`<div class="m" style="margin:-4px 0 4px">${L("need",ex)}</div>`:`<div class="m" style="margin:-4px 0 4px">${u>=x[0]&&tier(u)==T.indexOf(x)?L("cur"):L("passed")}</div>`}`}).join(""):'<span class="m">'+L("simfirst")+'</span>';
- upd.last={u,nom,mu,fin}}
+ refreshAsp();upd.last={u,nom,mu,fin}}
 $("rs").onclick=()=>{items.forEach(x=>x.q=0);upd()};
 $("cp").onclick=async()=>{const l=upd.last,t=L("cptxt",rp(l.fin),l.u,rp(l.nom),l.mu);try{await navigator.clipboard.writeText(t);$("cp").textContent="Tersalin ✓"}catch(e){$("cp").textContent="Gagal salin"}setTimeout(()=>$("cp").textContent=TT("Salin hasil"),1500)};
 $("th").onclick=()=>{const r=document.documentElement,d=r.dataset.theme=="dark"||(r.dataset.theme!="light"&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark";$("th").textContent=d?"🌙":"☀️"};
@@ -262,7 +247,7 @@ async function look(){er("");$("ares").hidden=true;const id=$("aid").value.repla
   const k=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b2u(r[0]),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
   show(JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b2u(r[1])},k,b2u(r[2])))))}
  catch(e){er(L(e&&e.name=="OperationError"?"e2":"e3"))}finally{$("ago").textContent=$("dgo").textContent=TT("Cek")}}
-function show(p,ns){cur=p;const rows=p[3],u=rows.reduce((a,x)=>a+x[1],0),nom=rows.reduce((a,x)=>a+x[1]*(items[x[0]]?numV(items[x[0]].r):(x[1]?x[2]/x[1]:0)),0),ti=tier(u),mu=T[ti][1],nx=T[ti+1];
+function show(p,ns){cur=p;resolvePromoterStore(p);refreshStockSummary();loadAspBaseline(p);const rows=p[3],u=rows.reduce((a,x)=>a+x[1],0),nom=rows.reduce((a,x)=>a+x[1]*(items[x[0]]?numV(items[x[0]].r):(x[1]?x[2]/x[1]:0)),0),ti=tier(u),mu=T[ti][1],nx=T[ti+1];
  $("ares").hidden=false;$("ahi").textContent=L("hello",p[0]);$("asub").textContent=[p[1],p[2]].filter(Boolean).join(" · ");
  $("afin").textContent=rp(nom*mu);$("atu").textContent=u;$("anom").textContent=rp(nom);$("amul").textContent=mf(mu)+"×";
  $("amsg").textContent=u==0?L("a0"):ti==0?L("a1",21-u):nx?L("a2",nx[0]-u,mf(nx[1])):L("a3");mood("mas2",u,ti);if(ti>0&&!ns)burst($("ares").querySelector(".hero"));
@@ -270,36 +255,27 @@ function show(p,ns){cur=p;const rows=p[3],u=rows.reduce((a,x)=>a+x[1],0),nom=row
  $("atb").innerHTML='<tr><th>'+L("th0")+'</th><th class="n">'+L("th1")+'</th><th class="n">'+L("th2")+'</th><th class="n">'+L("th3")+'</th></tr>'+rows.slice().sort((a,b)=>(b[1]*(items[b[0]]?numV(items[b[0]].r):0))-(a[1]*(items[a[0]]?numV(items[a[0]].r):0))).map(x=>{const it=items[x[0]];return`<tr><td><b>${dn(it.m).replace("realme ","")}</b><br><span class="m">${ds(it.s)}</span></td><td class="n">${x[1]}</td><td class="n">${rp(items[x[0]]?x[1]*numV(items[x[0]].r):x[2])}</td><td class="n">${rp((items[x[0]]?x[1]*numV(items[x[0]].r):x[2])*mu)}</td></tr>`}).join("")+`<tr><td><b>${L("tot")}</b></td><td class="n"><b>${u}</b></td><td class="n"><b>${rp(nom)}</b></td><td class="n"><b>${rp(nom*mu)}</b></td></tr>`;
  if(!ns)$("ares").scrollIntoView({behavior:"smooth",block:"start"})}
 $("ago").onclick=$("dgo").onclick=look;$("aid").onkeydown=$("dob").onkeydown=e=>{if(e.key=="Enter")look()};$("aid").oninput=()=>{$("dobw").hidden=true;$("dob").value="";er("")};
-$("asim").onclick=()=>{items.forEach(x=>x.q=0);cur[3].forEach(x=>items[x[0]].q=x[1]);upd();loadAspBaseline(cur);tab(false);scrollTo({top:0,behavior:"smooth"})};
-// ASP is calculated automatically; this module never changes actual incentive data.
-let aspBaseline={units:0,retail:0,hasRetail:false};
+$("asim").onclick=()=>{resolvePromoterStore(cur);items.forEach(x=>x.q=0);cur[3].forEach(x=>items[x[0]].q=x[1]);loadAspBaseline(cur);upd();tab(false);scrollTo({top:0,behavior:"smooth"})};
+// ASP is derived from the selected promoter's actual retail prices and simulated model quantities.
+// No ASP or retail-total field is manually editable.
+let aspBaseline={units:0,retail:0,hasRetail:false,unitPrices:{}};
 const aspMoney=n=>rp(Number.isFinite(n)?n:0);
 function refreshAsp(){
- const qty=Math.max(0,Math.floor(Number($("aspQtyInput").value)||0));
- const sales=Math.max(0,Number($("aspSalesInput").value)||0);
- const simulatedAsp=qty>0?sales/qty:0;
- $("aspSimulated").textContent=qty>0?aspMoney(simulatedAsp):"—";
- const delta=sales-aspBaseline.retail;
- $("aspDelta").textContent=aspBaseline.hasRetail?(delta>0?"+":"")+aspMoney(delta):"Belum ada pembanding";
- $("aspDelta").style.color=delta>0?"#16a34a":delta<0?"#dc2626":"var(--ink)";
+ const qty=items.reduce((a,x)=>a+Math.max(0,Number(x.q)||0),0);
+ let retail=0,missing=0;
+ items.forEach((x,i)=>{const q=Math.max(0,Number(x.q)||0);if(!q)return;const price=Number(aspBaseline.unitPrices[i]||x.price||0);if(price>0)retail+=q*price;else missing+=q;});
+ $("aspSimulatedView").textContent=qty>0&&missing===0?aspMoney(retail/qty):"Belum tersedia";
+ $("aspSimSales").textContent=qty>0&&missing===0?aspMoney(retail):"Belum tersedia";
 }
 function loadAspBaseline(p){
- const rows=p?.[3]||[];let units=0,retail=0,missing=0;
- rows.forEach(x=>{const q=Number(x[1])||0;units+=q;if(x.length>=4&&Number(x[3])>0)retail+=Number(x[3]);else if(q>0)missing+=q});
- aspBaseline={units,retail,hasRetail:units>0&&missing===0&&retail>0};
- const actualAsp=aspBaseline.hasRetail?retail/units:0;
- const actualText=aspBaseline.hasRetail?aspMoney(actualAsp):"Belum tersedia";
- $("aspActual").textContent=actualText;
+ const rows=p?.[3]||[];let units=0,retail=0,missing=0;const unitPrices={};
+ rows.forEach(x=>{const idx=Number(x[0]),q=Number(x[1])||0,value=Number(x[3])||0;units+=q;if(q>0&&value>0){retail+=value;unitPrices[idx]=value/q;}else if(q>0)missing+=q;});
+ aspBaseline={units,retail,hasRetail:units>0&&missing===0&&retail>0,unitPrices};
+ const actualText=aspBaseline.hasRetail?aspMoney(retail/units):"Belum tersedia";
  $("aspActualView").textContent=actualText;
  $("aspActualSales").textContent=aspBaseline.hasRetail?aspMoney(retail):"Belum tersedia";
- $("aspQtyInput").value=units||"";
- $("aspSalesInput").value=aspBaseline.hasRetail?Math.round(retail):"";
- $("aspStatus").textContent=aspBaseline.hasRetail?"Actual ASP berasal dari total nilai retail seluruh model SA dibagi total unit. Ubah Qty atau Total Nilai Retail untuk melihat Simulation ASP.":"Data Retail Price belum lengkap pada data SA ini. Pastikan sheet Qty memiliki kolom Retail Price dan data sudah diunggah Admin.";
  refreshAsp();
 }
-$("aspQtyInput").addEventListener("input",refreshAsp);$("aspSalesInput").addEventListener("input",refreshAsp);
-$("aspReset").onclick=()=>{if(!aspBaseline.hasRetail)return;$("aspQtyInput").value=aspBaseline.units;$("aspSalesInput").value=Math.round(aspBaseline.retail);refreshAsp()};
-
 
 $("lgs").value=lang;applyStatic();renderStockSelector();
 $("lgs").onchange=e=>{lang=e.target.value;applyStatic();build();upd();if(cur)show(cur,true)};
@@ -455,7 +431,6 @@ async function publishData(){if(!readerResult||!readerFile||!adminSession)return
  await sb.from(RECORD_TABLE).delete().neq("version_id",version);
  $("xs").textContent="Berhasil diterbitkan! Memuat data terbaru…\n"+diagnosticText(R);readerResult=null;readerFile=null;$("xf").value="";btn.hidden=true;await loadPublishedData();
  }catch(e){$("xs").textContent="Gagal menerbitkan: "+(e.message||e)}finally{btn.disabled=false}}
-$("stockStore").onchange=e=>{selectedStoreCode=e.target.value;items.forEach(x=>x.q=0);build();upd();refreshStockSummary()};
 $("adb").onclick=()=>{$("adm").hidden=!$("adm").hidden;if(!$("adm").hidden&&sb)loadPublishedData()};
 $("adminLoginBtn").onclick=adminLogin;$("adminPassword").addEventListener("keydown",e=>{if(e.key==="Enter")adminLogin()});
 $("adminLogoutBtn").onclick=async()=>{await sb.auth.signOut();adminSession=null;readerResult=null;readerFile=null;adminView(false);$("adminSettings").hidden=true;$("xs").textContent="";$("xp").hidden=true;setAdminError("Admin sudah logout.")};
