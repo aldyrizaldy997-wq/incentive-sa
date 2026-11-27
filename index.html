@@ -265,15 +265,17 @@ const CAT="data:image/webp;base64,UklGRhQ2AABXRUJQVlA4WAoAAAAQAAAAkwAAKwEAQUxQSM
 function mood(id,u,ti){const m=u==0?0:ti==0?1:ti<3?2:3,el=$(id);if(el.dataset.m!=m){el.dataset.m=m;el.className="mas m"+m;el.innerHTML=`<img src="${CAT}" alt="">`+(m==0?'<b class="zz">💤</b>':m==3?'<b class="zz">⭐</b>':"")}}
 function burst(h){if(!h||matchMedia("(prefers-reduced-motion:reduce)").matches)return;const E=["✨","⭐","🌸","💛"];for(let i=0;i<16;i++){const s=document.createElement("span"),a=Math.random()*6.28,d=60+Math.random()*90;s.className="cf";s.textContent=E[i%4];s.style.cssText=`--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d-30}px;--r:${Math.random()*360}deg`;h.appendChild(s);setTimeout(()=>s.remove(),1200)}}
 function showWelcomePopup(p,nom,mu,ti){
- const top=ti===T.length-1&&T.length>1,hasProgress=Number(p?.[3]?.reduce((a,x)=>a+(Number(x[1])||0),0)||0)>0;
- const title=top?"AMAZING! YOU'RE AT THE TOP TIER!":hasProgress?"GREAT JOB! LOOK WHAT YOU'VE EARNED!":"WELCOME BACK, SUPERSTAR!";
- $("welcomeEmoji").textContent=top?"🏆🎉":hasProgress?"✨🎊":"🌟💛";
+ const reward=Number(nom)*Number(mu),hasReward=Number.isFinite(reward)&&reward>0;
+ const units=Number(p?.[3]?.reduce((a,x)=>a+(Number(x[1])||0),0)||0),hasProgress=units>0;
+ const top=hasReward&&ti===T.length-1&&T.length>1;
+ const title=top?"AMAZING! YOU'RE AT THE TOP TIER!":hasReward?"GREAT JOB! LOOK WHAT YOU'VE EARNED!":hasProgress?"YOUR BREAKTHROUGH IS CLOSER!":"EVERY SUPERSTAR STARTS SOMEWHERE!";
+ $("welcomeEmoji").textContent=top?"🏆🎉":hasReward?"✨🎊":"🌟💛";
  $("welcomeTitle").textContent=title;
- $("welcomeName").textContent=(p?.[0]?"Congratulations, "+p[0]+"!":"Congratulations!");
- $("welcomeAmount").textContent=rp(nom*mu);
+ $("welcomeName").textContent=(p?.[0]?"Welcome back, "+p[0]+"!":"Welcome back, Superstar!");
+ $("welcomeAmount").textContent=rp(hasReward?reward:0);
  const tierLabel=String(T[ti]?.[2]||("Tier "+(ti+1)));
  $("welcomeTier").textContent="⭐ "+tierLabel+" · "+mf(mu)+"×";
- $("welcomeCopy").textContent=top?"You've reached the highest incentive multiplier. Your hard work is paying off — keep shining!":hasProgress?"Your performance is turning into rewards. Keep pushing and unlock the next incentive tier!":"Your incentive journey starts here. Every unit brings you closer to your next reward!";
+ $("welcomeCopy").textContent=top?"You've reached the highest incentive multiplier. Your hard work is paying off — keep shining!":hasReward?"Your performance is turning into rewards. Keep pushing and unlock the next incentive tier!":hasProgress?"You're building momentum! Every unit counts, and your next reward is within reach. Keep going — you've got this!":"No rewards yet? No worries! Every Superstar starts somewhere. Every unit you sell brings you one step closer to your first reward. Let's make it happen! 💪";
  $("welcomePopup").hidden=false;
  if(!matchMedia("(prefers-reduced-motion:reduce)").matches){const card=$("welcomePopup").querySelector(".welcome-card");for(let i=0;i<22;i++){const e=document.createElement("span"),a=Math.random()*6.28,d=45+Math.random()*125;e.className="cf";e.textContent=["✨","⭐","🎉","💛"][i%4];e.style.cssText=`left:50%;top:44%;--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d-45}px;--r:${Math.random()*360}deg`;card.appendChild(e);setTimeout(()=>e.remove(),1300)}}
 }
